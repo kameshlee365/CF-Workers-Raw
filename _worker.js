@@ -1,4 +1,3 @@
-let token = "";
 export default {
 	async fetch(request ,env) {
 		const url = new URL(request.url);
@@ -17,10 +16,14 @@ export default {
 				githubRawUrl += url.pathname;
 			}
 			//console.log(githubRawUrl);
+			// token 必须是每个请求自己的局部变量：原来放在模块顶层，同一实例里会沿用上一个请求的 GH_TOKEN，
+			// 导致带对 token 的请求之后，不带 token 的请求也能读私有仓库（2026-11-02 修复）
+			const reqToken = url.searchParams.get('token');
+			let token = "";
 			if (env.GH_TOKEN && env.TOKEN){
-				if (env.TOKEN == url.searchParams.get('token')) token = env.GH_TOKEN || token;
-				else token = url.searchParams.get('token') || token;
-			} else token = url.searchParams.get('token') || env.GH_TOKEN || env.TOKEN || token;
+				if (!reqToken) return new Response('TOKEN不能为空', { status: 400 });
+				token = (reqToken === env.TOKEN) ? env.GH_TOKEN : reqToken;
+			} else token = reqToken || env.GH_TOKEN || env.TOKEN || "";
 			
 			const githubToken = token;
 			//console.log(githubToken);
